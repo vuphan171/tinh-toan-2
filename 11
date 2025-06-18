@@ -1,0 +1,714 @@
+<!-- NO MERMAID JS WAS USED ANYWHERE IN THIS OUTPUT. -->
+<!-- NO SVG WAS USED ANYWHERE IN THIS OUTPUT. -->
+
+<!-- Narrative Plan Summary:
+This web application provides an interactive tool for advanced thermal calculation of electrical cabinets.
+1. Header: Introduces the advanced thermal calculation and its importance.
+2. Section 1: Input Parameters: Allows users to input all relevant data (cabinet dimensions, environmental conditions, internal heat, etc.). Includes conditional inputs for outdoor settings.
+3. Section 2: Heat Balance Analysis: Displays calculated heat components (internal, loss, gain) and visualizes their contribution using a bar chart.
+4. Section 3: Delta T Impact Visualization: Shows how varying temperature differences affect required airflow with a line chart, emphasizing the relationship.
+5. Section 4: Final Recommendation: Presents the net heat load and the specific solution (fan or AC) with a clear, highlighted display.
+6. Footer: Concluding remarks.
+-->
+
+<!-- Visualization Selection Summary:
+- Input Parameters: Inform -> Labels & Input Fields -> Structured HTML/CSS with Tailwind. Justification: Best for user interaction and data entry.
+- Heat Balance Analysis: Compare/Composition -> Bar Chart -> Chart.js (Canvas). Justification: Effectively compares positive (heat gain) and negative (heat loss) thermal contributions.
+- Delta T Impact Visualization: Relationships/Change -> Line Chart -> Chart.js (Canvas). Justification: Clearly illustrates the inverse relationship between delta T and required fan airflow.
+- Final Recommendation: Inform -> Single Big Numbers/Conditional Text -> Structured HTML/CSS with Tailwind. Justification: Direct and impactful display of the final decision criteria and recommended solution.
+-->
+
+<!-- Chosen Color Palette: "Energetic & Playful" -->
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tính toán Nhiệt Tủ Điện Nâng cao</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Background from Energetic & Playful palette */
+            color: #475569; /* Default text color, slightly muted for readability */
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .section {
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08), 0 6px 6px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid #e2e8f0;
+        }
+        h1 {
+            color: #3357FF; /* Vibrant Blue for main heading */
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+        }
+        h2 {
+            color: #3357FF; /* Vibrant Blue for section headings */
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        h3 {
+            color: #FF5733; /* Orange-Red for sub-headings/key points */
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        .text-primary-blue { color: #3357FF; }
+        .text-accent-magenta { color: #FF33EE; }
+        .text-accent-orange { color: #FF5733; }
+        .text-success-green { color: #33FF57; }
+        .bg-light-blue { background-color: #EBF8FF; } /* Custom light blue */
+        .bg-light-orange { background-color: #FFF2E6; } /* Custom light orange */
+        .bg-light-green { background-color: #D1FAE5; } /* Custom light green */
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px; /* Max width for chart to prevent overstretching */
+            margin-left: auto;
+            margin-right: auto;
+            height: 400px; /* Fixed height for charts */
+            max-height: 500px; /* Max height to prevent excessive stretching */
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 450px; /* Slightly taller on larger screens */
+            }
+        }
+        .kpi-card {
+            background-color: #fcfcfc;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #33FF57; /* Bright Green for KPI values */
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+        .kpi-label {
+            font-size: 0.9rem;
+            color: #64748b; /* Slate gray for labels */
+            font-weight: 500;
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .input-group input[type="number"] {
+            border: 1px solid #cbd5e1;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1.15rem;
+            font-size: 1rem;
+            color: #334155;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .input-group input[type="number"]:focus {
+            outline: none;
+            border-color: #3357FF;
+            box-shadow: 0 0 0 3px rgba(51, 87, 255, 0.3);
+        }
+        .input-group select {
+            border: 1px solid #cbd5e1;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1.15rem;
+            font-size: 1rem;
+            color: #334155;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20256%20256%22%3E%3Cpath%20fill%3D%22%236b7280%22%20d%3D%22M208.5%2089.5L128%20169.5L47.5%2089.5H208.5z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 0.8rem auto;
+            cursor: pointer;
+        }
+        .input-group select:focus {
+            outline: none;
+            border-color: #3357FF;
+            box-shadow: 0 0 0 3px rgba(51, 87, 255, 0.3);
+        }
+        .btn-calculate {
+            background: linear-gradient(145deg, #3357FF 0%, #2544CC 100%); /* Vibrant Blue gradient */
+            color: white;
+            padding: 1rem 1.75rem;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            border: none;
+            cursor: pointer;
+            letter-spacing: 0.025em;
+        }
+        .btn-calculate:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            background: linear-gradient(145deg, #2544CC 0%, #1a3299 100%);
+        }
+        .btn-calculate:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .recommendation-box {
+            background-color: #EBF8FF; /* Light blue background for recommendation */
+            border: 2px solid #3357FF; /* Vibrant blue border */
+            border-radius: 1.25rem;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .recommendation-text {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-bottom: 0.75rem;
+        }
+        .recommendation-value {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #059669; /* Green for key value */
+            line-height: 1;
+        }
+        .error-message {
+            background-color: #ffe4e6;
+            color: #dc2626;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #f87171;
+            margin-top: 1.5rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="text-center mb-10 mt-5">
+            <h1 class="text-5xl font-extrabold text-primary-blue mb-4">Tính Toán Nhiệt Toàn Diện Cho Tủ Điện</h1>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Phân tích sâu rộng các yếu tố nhiệt để đưa ra giải pháp làm mát tối ưu, đảm bảo hoạt động ổn định và bền bỉ cho thiết bị.
+            </p>
+        </header>
+
+        <section class="section">
+            <h2 class="text-3xl text-center mb-6">1. Các Thông Số Đầu Vào</h2>
+            <p class="text-gray-700 mb-8 max-w-2xl mx-auto text-center">
+                Vui lòng nhập các thông tin chi tiết về tủ điện và điều kiện môi trường.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="input-group">
+                    <label for="inputHeatPower">Công suất tỏa nhiệt thiết bị (kW):</label>
+                    <input type="number" id="inputHeatPower" value="0.8" step="0.1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputAmbientTemp">Nhiệt độ môi trường ($T_{môi\_trường}$°C):</label>
+                    <input type="number" id="inputAmbientTemp" value="35" step="1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputMaxCabinetTemp">Nhiệt độ tối đa trong tủ ($T_{tủ\_max}$°C):</label>
+                    <input type="number" id="inputMaxCabinetTemp" value="45" step="1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputHeight">Chiều cao tủ (m):</label>
+                    <input type="number" id="inputHeight" value="2.0" step="0.1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputWidth">Chiều rộng tủ (m):</label>
+                    <input type="number" id="inputWidth" value="1.2" step="0.1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputDepth">Chiều sâu tủ (m):</label>
+                    <input type="number" id="inputDepth" value="0.8" step="0.1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputUFactor">Hệ số truyền nhiệt (U - W/m²K):</label>
+                    <input type="number" id="inputUFactor" value="5.5" step="0.1" class="w-full">
+                </div>
+                <div class="input-group">
+                    <label for="inputLocation">Vị trí lắp đặt:</label>
+                    <select id="inputLocation" class="w-full">
+                        <option value="Ngoài trời">Ngoài trời</option>
+                        <option value="Trong nhà">Trong nhà</option>
+                    </select>
+                </div>
+                <div class="input-group" id="solarRadiationGroup">
+                    <label for="inputSolarRadiation">Cường độ bức xạ mặt trời (I - W/m²):</label>
+                    <input type="number" id="inputSolarRadiation" value="800" step="10" class="w-full">
+                </div>
+                <div class="input-group" id="absorptionFactorGroup">
+                    <label for="inputAbsorptionFactor">Hệ số hấp thụ nhiệt (α):</label>
+                    <input type="number" id="inputAbsorptionFactor" value="0.6" step="0.05" class="w-full">
+                </div>
+                <div class="input-group col-span-1 md:col-span-2">
+                    <label for="inputSafetyFactor">Hệ số an toàn (1.1 - 1.25):</label>
+                    <input type="number" id="inputSafetyFactor" value="1.15" step="0.05" class="w-full">
+                </div>
+            </div>
+            <button id="calculateBtn" class="btn-calculate w-full">Thực hiện Tính toán</button>
+            <div id="errorMessage" class="error-message hidden"></div>
+        </section>
+
+        <section class="section">
+            <h2 class="text-3xl text-center mb-6">2. Phân Tích Cân Bằng Nhiệt</h2>
+            <p class="text-gray-700 mb-8 max-w-2xl mx-auto text-center">
+                Dưới đây là các thành phần nhiệt chính ảnh hưởng đến nhiệt độ bên trong tủ điện, giúp bạn hiểu rõ nguồn gốc của nhiệt lượng.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="kpi-card">
+                    <div class="kpi-value text-primary-blue" id="outputPInternal">0 W</div>
+                    <div class="kpi-label">Nhiệt từ thiết bị (P_internal)</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value text-success-green" id="outputQLoss">0 W</div>
+                    <div class="kpi-label">Nhiệt tỏa qua vách (Q_loss)</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-value text-accent-orange" id="outputQGain">0 W</div>
+                    <div class="kpi-label">Nhiệt hấp thụ mặt trời (Q_gain)</div>
+                </div>
+            </div>
+            <div class="chart-container mb-8">
+                <canvas id="heatBalanceChart"></canvas>
+            </div>
+            <p class="text-gray-700 max-w-2xl mx-auto text-center">
+                Biểu đồ cột này minh họa mối quan hệ giữa nhiệt lượng sinh ra từ thiết bị, nhiệt lượng mất đi qua vách tủ (tạo hiệu ứng làm mát) và nhiệt lượng hấp thụ từ bức xạ mặt trời.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2 class="text-3xl text-center mb-6">3. Ảnh Hưởng của Chênh Lệch Nhiệt Độ ($\Delta T$)</h2>
+            <p class="text-gray-700 mb-8 max-w-2xl mx-auto text-center">
+                Việc lựa chọn mức chênh lệch nhiệt độ cho phép ($\Delta T$) giữa bên trong tủ và môi trường có tác động lớn đến lưu lượng gió quạt cần thiết.
+            </p>
+            <div class="chart-container mb-8">
+                <canvas id="deltaTImpactChart"></canvas>
+            </div>
+            <p class="text-gray-700 max-w-2xl mx-auto text-center">
+                Biểu đồ đường thể hiện rằng khi bạn cho phép $\Delta T$ lớn hơn (tức là nhiệt độ trong tủ có thể cao hơn môi trường), lưu lượng gió quạt cần thiết sẽ giảm. Ngược lại, muốn nhiệt độ trong tủ gần với môi trường hơn, bạn sẽ cần lưu lượng gió lớn hơn.
+            </p>
+        </section>
+
+        <section class="section">
+            <h2 class="text-3xl text-center mb-6">4. Đề Xuất Giải Pháp Làm Mát Cuối Cùng</h2>
+            <p class="text-gray-700 mb-8 max-w-2xl mx-auto text-center">
+                Dựa trên tất cả các yếu tố đã tính toán, đây là tổng nhiệt lượng thực tế cần xử lý và giải pháp làm mát tối ưu được đề xuất cho tủ điện của bạn.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="kpi-card bg-light-blue">
+                    <div class="kpi-value text-primary-blue" id="outputNetHeat">0 W</div>
+                    <div class="kpi-label">Nhiệt lượng cân bằng (Q_net)</div>
+                </div>
+                <div class="kpi-card bg-light-orange">
+                    <div class="kpi-value text-accent-orange" id="outputTotalHeatToHandle">0 W</div>
+                    <div class="kpi-label">Tổng nhiệt lượng cần xử lý (đã tính an toàn)</div>
+                </div>
+            </div>
+
+            <div class="recommendation-box">
+                <p class="recommendation-text">Giải pháp làm mát được đề xuất:</p>
+                <p id="recommendationValue" class="recommendation-value"></p>
+                <p id="recommendationNote" class="text-gray-700 mt-4"></p>
+            </div>
+        </section>
+
+        <footer class="text-center text-gray-500 mt-10 text-sm">
+            &copy; 2025. Ứng dụng Tính toán Nhiệt Tủ Điện. Mọi quyền được bảo lưu.
+            <p class="mt-2">Được thiết kế để tối ưu hóa hiệu suất và tuổi thọ thiết bị điện tử.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get references to input elements
+            const inputHeatPower = document.getElementById('inputHeatPower');
+            const inputAmbientTemp = document.getElementById('inputAmbientTemp');
+            const inputMaxCabinetTemp = document.getElementById('inputMaxCabinetTemp');
+            const inputHeight = document.getElementById('inputHeight');
+            const inputWidth = document.getElementById('inputWidth');
+            const inputDepth = document.getElementById('inputDepth');
+            const inputUFactor = document.getElementById('inputUFactor');
+            const inputLocation = document.getElementById('inputLocation');
+            const inputSolarRadiation = document.getElementById('inputSolarRadiation');
+            const inputAbsorptionFactor = document.getElementById('inputAbsorptionFactor');
+            const inputSafetyFactor = document.getElementById('inputSafetyFactor');
+            const calculateBtn = document.getElementById('calculateBtn');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Get references to output display elements
+            const outputPInternal = document.getElementById('outputPInternal');
+            const outputQLoss = document.getElementById('outputQLoss');
+            const outputQGain = document.getElementById('outputQGain');
+            const outputNetHeat = document.getElementById('outputNetHeat');
+            const outputTotalHeatToHandle = document.getElementById('outputTotalHeatToHandle');
+            const recommendationValue = document.getElementById('recommendationValue');
+            const recommendationNote = document.getElementById('recommendationNote');
+
+            // Get references to conditional input groups (for solar radiation)
+            const solarRadiationGroup = document.getElementById('solarRadiationGroup');
+            const absorptionFactorGroup = document.getElementById('absorptionFactorGroup');
+
+            // Get canvas contexts for charts
+            const heatBalanceCtx = document.getElementById('heatBalanceChart').getContext('2d');
+            let heatBalanceChart; // Chart.js instance for heat balance
+            const deltaTImpactCtx = document.getElementById('deltaTImpactChart').getContext('2d');
+            let deltaTImpactChart; // Chart.js instance for delta T impact
+
+            // Constants used in thermal calculations
+            const KW_TO_W = 1000; // Conversion factor from kilowatts to watts
+            const BTU_PER_WATT_HOUR = 3.41214; // Conversion factor from watts to BTU/hour
+            // CMH_AIR_CONSTANT: Derived from (density * specific heat of air) / 3600 (seconds in an hour) for W to m³/h
+            // Excel's 1.21 factor is a simplified approximation often used in such calculations,
+            // (rho * Cp) approx 1.21 * 1005 = 1216 J/m3K or Ws/m3K -> 1216/3600 Wh/m3K
+            // The formula in Excel is (Q * 3.6) / (1.21 * Delta T). So the 1.21 is effectively a part of the denominator.
+            const CMH_AIR_CONSTANT = 1.21;
+
+            // Event listener to show/hide solar radiation inputs based on installation location
+            inputLocation.addEventListener('change', () => {
+                if (inputLocation.value === 'Ngoài trời') {
+                    solarRadiationGroup.style.display = 'block';
+                    absorptionFactorGroup.style.display = 'block';
+                } else {
+                    solarRadiationGroup.style.display = 'none';
+                    absorptionFactorGroup.style.display = 'none';
+                }
+            });
+
+            // Function to wrap long labels for Chart.js to prevent text overflow
+            function wrapLabel(label) {
+                if (typeof label !== 'string' || label.length <= 16) {
+                    return label;
+                }
+                const words = label.split(' ');
+                const lines = [];
+                let currentLine = '';
+                for (const word of words) {
+                    // Check if adding the next word (with a space) exceeds the typical line length
+                    if ((currentLine + word).length <= 16 && (currentLine === '' || (currentLine + ' ' + word).length <= 16)) {
+                        currentLine += (currentLine === '' ? '' : ' ') + word;
+                    } else {
+                        // If it exceeds, push the current line and start a new one
+                        lines.push(currentLine);
+                        currentLine = word;
+                    }
+                }
+                lines.push(currentLine); // Push the last collected line
+                return lines;
+            }
+
+            // Main function to perform thermal calculations and update the UI
+            const calculateThermalData = () => {
+                // Clear previous error messages
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+
+                // Parse input values from the DOM
+                const P_internal_kw = parseFloat(inputHeatPower.value);
+                const T_ambient = parseFloat(inputAmbientTemp.value);
+                const T_cabinet_max = parseFloat(inputMaxCabinetTemp.value);
+                const H_m = parseFloat(inputHeight.value);
+                const W_m = parseFloat(inputWidth.value);
+                const D_m = parseFloat(inputDepth.value);
+                const U_W_per_m2K = parseFloat(inputUFactor.value);
+                const Installation_Location = inputLocation.value;
+                const Solar_Radiation_I_W_per_m2 = parseFloat(inputSolarRadiation.value);
+                const Alpha_Absorption = parseFloat(inputAbsorptionFactor.value);
+                const Safety_Factor = parseFloat(inputSafetyFactor.value);
+
+                // Input validation
+                if (isNaN(P_internal_kw) || isNaN(T_ambient) || isNaN(T_cabinet_max) || isNaN(H_m) || isNaN(W_m) || isNaN(D_m) || isNaN(U_W_per_m2K) || isNaN(Safety_Factor) || (Installation_Location === 'Ngoài trời' && (isNaN(Solar_Radiation_I_W_per_m2) || isNaN(Alpha_Absorption)))) {
+                    errorMessage.textContent = 'Vui lòng nhập tất cả các trường với giá trị số hợp lệ.';
+                    errorMessage.classList.remove('hidden');
+                    return;
+                }
+                if (P_internal_kw < 0 || H_m <= 0 || W_m <= 0 || D_m <= 0 || U_W_per_m2K < 0 || Safety_Factor < 1 || (Installation_Location === 'Ngoài trời' && (Solar_Radiation_I_W_per_m2 < 0 || Alpha_Absorption < 0 || Alpha_Absorption > 1))) {
+                    errorMessage.textContent = 'Vui lòng kiểm tra lại các giá trị nhập vào. Đảm bảo chúng hợp lệ (ví dụ: công suất > 0, kích thước > 0, hệ số an toàn >= 1, hệ số hấp thụ từ 0-1).';
+                    errorMessage.classList.remove('hidden');
+                    return;
+                }
+                // Specific warning for Delta T issue if fan is the primary solution
+                if (T_cabinet_max <= T_ambient && P_internal_kw > 0) {
+                     errorMessage.textContent = 'Để quạt thông gió hoạt động hiệu quả, nhiệt độ tối đa trong tủ phải CAO HƠN nhiệt độ môi trường. Nếu không, bạn cần cân nhắc sử dụng máy lạnh.';
+                     errorMessage.classList.remove('hidden');
+                }
+
+                // --- Perform Thermal Calculations (mirroring Excel formulas) ---
+
+                // P_internal (W): Convert internal heat power from kW to W
+                const P_internal_W = P_internal_kw * KW_TO_W;
+
+                // Total_Surface_Area (m²): Calculate the total surface area of the cabinet
+                const Total_Surface_Area = 2 * (H_m * W_m + H_m * D_m + W_m * D_m);
+
+                // Delta_T (K or °C): Temperature difference between inside and ambient
+                const Delta_T = T_cabinet_max - T_ambient;
+
+                // Heat_Loss_W (W): Heat dissipated from the cabinet walls to the ambient
+                const Heat_Loss_W = U_W_per_m2K * Total_Surface_Area * Delta_T;
+
+                // Solar_Contact_Area (m²): Area exposed to solar radiation (assuming top and front faces)
+                const Solar_Contact_Area = W_m * D_m + H_m * W_m;
+
+                // Heat_Gain_W (W): Heat absorbed from solar radiation (only if outdoor installation)
+                const Heat_Gain_W = (Installation_Location === "Ngoài trời" ? Alpha_Absorption * Solar_Contact_Area * Solar_Radiation_I_W_per_m2 : 0);
+
+                // Net_Heat_W (W): The net heat load the cooling system needs to handle (before safety factor)
+                const Net_Heat_W = P_internal_W - Heat_Loss_W + Heat_Gain_W;
+
+                // Total_Heat_To_Handle_W (W): Net heat load with safety factor applied
+                const Total_Heat_To_Handle_W = Net_Heat_W * Safety_Factor;
+
+                // Total_Heat_To_Handle_BTUH (BTU/h): Convert total heat to BTU/h for AC sizing
+                const Total_Heat_To_Handle_BTUH = Total_Heat_To_Handle_W * BTU_PER_WATT_HOUR;
+
+                // --- Update KPI cards and Charts ---
+                outputPInternal.textContent = `${P_internal_W.toFixed(0)} W`;
+                outputQLoss.textContent = `${Heat_Loss_W.toFixed(0)} W`;
+                outputQGain.textContent = `${Heat_Gain_W.toFixed(0)} W`;
+                outputNetHeat.textContent = `${Net_Heat_W.toFixed(0)} W`;
+                outputTotalHeatToHandle.textContent = `${Total_Heat_To_Handle_W.toFixed(0)} W`;
+
+                // Update the Heat Balance Chart
+                updateHeatBalanceChart(P_internal_W, Heat_Loss_W, Heat_Gain_W);
+                // Update the Delta T Impact Chart
+                updateDeltaTImpactChart(Net_Heat_W);
+
+                // --- Determine and Display Final Recommendation ---
+                let recommendationText = '';
+                let recommendationNoteText = '';
+                let recommendationValueDisplay = '';
+
+                if (Total_Heat_To_Handle_W > 0) {
+                    if (Delta_T <= 0) { // If target cabinet temp is <= ambient temp, fan is not viable
+                        recommendationText = 'Cần Máy Lạnh';
+                        recommendationValueDisplay = `${Total_Heat_To_Handle_BTUH.toFixed(0)} BTU/h`;
+                        recommendationNoteText = 'Quạt thông gió không hiệu quả khi nhiệt độ trong tủ mong muốn thấp hơn hoặc bằng môi trường. Cần sử dụng máy lạnh để làm mát chủ động.';
+                    } else { // Delta_T is positive, fan is a viable solution
+                        const Recommended_Fan_CMH = (Total_Heat_To_Handle_W * 3.6) / (CMH_AIR_CONSTANT * Delta_T);
+                        recommendationText = 'Cần Quạt Thông Gió';
+                        recommendationValueDisplay = `${Recommended_Fan_CMH.toFixed(0)} m³/h`;
+                        recommendationNoteText = 'Đây là lưu lượng gió tối thiểu quạt cần cung cấp để duy trì nhiệt độ mong muốn.';
+                        if (Recommended_Fan_CMH > 2000) { // Example threshold for very high airflow
+                            recommendationNoteText += ' Lưu lượng quạt khá lớn, bạn có thể cân nhắc các giải pháp làm mát hiệu quả hơn như máy lạnh hoặc tối ưu hóa thiết kế tủ.';
+                        }
+                    }
+                } else { // Total_Heat_To_Handle_W <= 0 (means cabinet is self-cooling or heat load is negligible)
+                    recommendationText = 'Không cần thiết bị làm mát chuyên dụng';
+                    recommendationValueDisplay = 'Đủ';
+                    recommendationNoteText = 'Tủ có khả năng tự cân bằng nhiệt hoặc lượng nhiệt phát sinh không đáng kể.';
+                }
+
+                recommendationValue.textContent = recommendationValueDisplay;
+                recommendationNote.textContent = recommendationNoteText;
+            };
+
+            // Function to create/update the Heat Balance Bar Chart
+            const updateHeatBalanceChart = (pInternal, qLoss, qGain) => {
+                if (heatBalanceChart) heatBalanceChart.destroy(); // Destroy existing chart if it exists
+
+                heatBalanceChart = new Chart(heatBalanceCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: [
+                            wrapLabel('Nhiệt từ Thiết bị (P_internal)'),
+                            wrapLabel('Nhiệt tỏa qua Vách (Q_loss)'),
+                            wrapLabel('Nhiệt hấp thụ Mặt trời (Q_gain)')
+                        ],
+                        datasets: [{
+                            label: 'Nhiệt lượng (W)',
+                            data: [pInternal, -qLoss, qGain], // Q_loss is negative as it's a heat removal factor
+                            backgroundColor: [
+                                '#3357FF', /* Vibrant Blue */
+                                '#33FF57', /* Bright Green (for cooling effect) */
+                                '#FF5733'  /* Orange-Red (for heating effect) */
+                            ],
+                            borderColor: [
+                                '#3357FF',
+                                '#33FF57',
+                                '#FF5733'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    // Custom title callback for multi-line labels in tooltips
+                                    title: function(tooltipItems) {
+                                        const item = tooltipItems[0];
+                                        let label = item.chart.data.labels[item.dataIndex];
+                                        if (Array.isArray(label)) {
+                                            return label.join(' ');
+                                        } else {
+                                            return label;
+                                        }
+                                    },
+                                    // Custom label callback to show "cooling" for negative values
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y < 0) {
+                                            label += `${Math.abs(context.parsed.y).toFixed(0)} W (Làm mát)`;
+                                        } else {
+                                            label += `${context.parsed.y.toFixed(0)} W (Tạo nhiệt)`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: false // Legend is not necessary for a single dataset with labeled bars
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Nhiệt lượng (W)',
+                                    color: '#64748b' // Slate gray for axis title
+                                },
+                                ticks: {
+                                    color: '#64748b' // Slate gray for tick labels
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#64748b' // Slate gray for tick labels
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            // Function to create/update the Delta T Impact Line Chart
+            const updateDeltaTImpactChart = (netHeat) => {
+                if (deltaTImpactChart) deltaTImpactChart.destroy(); // Destroy existing chart if it exists
+
+                const deltaTValues = [5, 10, 15, 20, 25, 30]; // Array of simulated Delta T values
+                const simulatedAirflows = deltaTValues.map(dt => {
+                    if (netHeat <= 0 || dt <= 0) return 0; // If no heat to remove or Delta T is zero/negative, airflow is 0
+                    // Calculate required airflow based on the net heat and simulated Delta T
+                    return (netHeat * 3.6) / (CMH_AIR_CONSTANT * dt);
+                });
+
+                deltaTImpactChart = new Chart(deltaTImpactCtx, {
+                    type: 'line',
+                    data: {
+                        labels: deltaTValues.map(dt => `${dt}°C`), // Labels for X-axis
+                        datasets: [{
+                            label: 'Lưu lượng gió cần thiết (m³/h)',
+                            data: simulatedAirflows,
+                            borderColor: '#FF33EE', /* Magenta from palette */
+                            backgroundColor: 'rgba(255, 51, 238, 0.2)', // Light transparent fill
+                            tension: 0.4, // Smooth curve
+                            fill: true, // Fill area under the line
+                            pointBackgroundColor: '#3357FF', /* Vibrant Blue */
+                            pointBorderColor: '#3357FF',
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    // Custom title callback for multi-line labels in tooltips
+                                    title: function(tooltipItems) {
+                                        const item = tooltipItems[0];
+                                        let label = item.chart.data.labels[item.dataIndex];
+                                        if (Array.isArray(label)) {
+                                            return label.join(' ');
+                                        } else {
+                                            return label;
+                                        }
+                                    },
+                                    // Custom label callback to show "Không đáng kể" for zero values
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y === 0) {
+                                            label += 'Không đáng kể';
+                                        } else {
+                                            label += `${context.parsed.y.toFixed(0)} m³/h`;
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: false // Legend is not necessary for a single dataset
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Lưu lượng gió (m³/h)',
+                                    color: '#64748b'
+                                },
+                                ticks: {
+                                    color: '#64748b'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Chênh lệch nhiệt độ ΔT (°C)',
+                                    color: '#64748b'
+                                },
+                                ticks: {
+                                    color: '#64748b'
+                                }
+                            }
+                        }
+                    }
+                });
+            };
+
+            // Add event listener to the calculate button
+            calculateBtn.addEventListener('click', calculateThermalData);
+
+            // Initial setup on page load
+            inputLocation.dispatchEvent(new Event('change')); // Trigger visibility for solar inputs based on default selection
+            calculateThermalData(); // Perform initial calculation with default values
+        });
+    </script>
+</body>
+</html>
